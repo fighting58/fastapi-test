@@ -3,6 +3,7 @@ __doc__ = "Manage user.db"
 import sqlite3
 import random
 import string
+import hashlib
 
 from passlib.context import CryptContext
 
@@ -40,6 +41,22 @@ def create_admin_table() -> dict:
         return {'message': f'add table: {ADMIN_TABLE}'}
     return {'message': f'{ADMIN_TABLE} already exists'}
 
+def add_admin(email: str, username: str, password: str):
+    hashed_password = hashlib.sha256(password.encode('utf-8')).digest()
+    encoded_password = base64.b64encode(hashed_password).decode('utf-8')
+    cursor = user_db.cursor()
+    cursor.execute(f"INSERT INTO {ADMIN_TABLE} (email, username, password)", (email, username, encoded_password))
+    user_db.commit()
+
+
+def get_admin() -> dict:
+    """get admin account"""
+    cursor.execute(f"SELECT * FROM {ADMIN_TABLE} WHERE email =  '{email}'")
+    result = cursor.fetchone()
+    if result:
+        return {'email': result[1], 'username': result[2], 'password': result[3]}
+    return 
+
 def add_user(email: str, username: str, password: str, role: str='user') -> dict:
     """add user data to users table"""
     if get_user_by_email(email):
@@ -50,12 +67,7 @@ def add_user(email: str, username: str, password: str, role: str='user') -> dict
                      (email, username, hashed_password, role))
     user_db.commit()
     if role == 'admin':
-        cursor.execute(f"SELECT * FROM {ADMIN_TABLE} WHERE email =  '{email}'")
-        admin_user = cursor.fetchone()
-        if not admin_user:
-            cursor.execute(f"INSERT INTO {ADMIN_TABLE} (email, username, password) \
-                             VALUES (?, ? ,?)", (email, username, hashed_password))
-    user_db.commit()
+        add_admin(email, username, password)
     return {'massage': f'add {email} accounts'}
 
 def update_user(email, username, password, role='user'):
@@ -74,7 +86,7 @@ def delete_user(email):
     user_db.commit()
     return {'message': f'delete {email} accounts'}
 
-def get_user_by_email(email):
+def get_user_by_email(email: str):
     """fetch user data from users table"""
     cursor = user_db.cursor()
     cursor.execute(f"SELECT * FROM {USER_TABLE} WHERE email = ?", (email, ))
