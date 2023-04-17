@@ -3,7 +3,7 @@ __doc__ = "Manage user.db"
 import sqlite3
 import random
 import string
-import hashlib
+from cryptography.fernet import Fernet
 
 from passlib.context import CryptContext
 
@@ -35,27 +35,34 @@ def create_admin_table() -> dict:
         (id INTEGER PRIMARY KEY AUTOINCREMENT,
         email TEXT UNIQUE,
         username TEXT NOT NULL,
-        password TEXT NOT NULL)
+        password TEXT NOT NULL,
+        key TEXT NOT NULL)
         """)
         user_db.commit()
         return {'message': f'add table: {ADMIN_TABLE}'}
     return {'message': f'{ADMIN_TABLE} already exists'}
 
+
 def add_admin(email: str, username: str, password: str):
-    hashed_password = hashlib.sha256(password.encode('utf-8')).digest()
-    encoded_password = base64.b64encode(hashed_password).decode('utf-8')
+    admin = get_admin()
+    if admin:
+        return {'message': 'amdin account exists'}
+    key = Fernet.generate_key().decode()
+    encrypt_password = Fernet(key.encode()).encrypt(password.encode())
     cursor = user_db.cursor()
-    cursor.execute(f"INSERT INTO {ADMIN_TABLE} (email, username, password)", (email, username, encoded_password))
+    cursor.execute(f"INSERT INTO {ADMIN_TABLE} (email, username, password, key) VALUES (?, ?, ?, ?)", (email, username, encrypt_password, key))
     user_db.commit()
+    return {'message': 'successfuly add admin account'}
 
 
 def get_admin() -> dict:
     """get admin account"""
-    cursor.execute(f"SELECT * FROM {ADMIN_TABLE} WHERE email =  '{email}'")
+    cursor = user_db.cursor()
+    cursor.execute(f"SELECT * FROM {ADMIN_TABLE}")
     result = cursor.fetchone()
     if result:
-        return {'email': result[1], 'username': result[2], 'password': result[3]}
-    return 
+        return {'email': result[1], 'username': result[2], 'password': result[3], 'key':result[4]}
+    return None
 
 def add_user(email: str, username: str, password: str, role: str='user') -> dict:
     """add user data to users table"""
