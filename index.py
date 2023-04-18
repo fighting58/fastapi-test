@@ -1,14 +1,25 @@
-__doc__ = """ main page """
+from fastapi import FastAPI, Request, Form, Response
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from starlette.status import HTTP_302_FOUND
 
-import db
-import smtp
+app = FastAPI()
+templates = Jinja2Templates(directory="./static/template")
 
-print(db.create_user_table())
-print(db.create_admin_table())
+@app.get("/", response_class=HTMLResponse)
+async def login(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
 
-print(db.add_admin('fighting58@gmail.com', 'Kim Byoung-woo', 'rrnmlsnrnhajqqvy'))
+@app.post("/", response_class=HTMLResponse)
+async def login_post(request: Request, response: Response, email: str = Form(...), password: str = Form(...)):
+    # 로그인 처리 로직
+    if email == "user@example.com" and password == "password":
+        response.status_code = HTTP_302_FOUND
+        response.headers["Location"] = "/index"
+        return response
+    else:
+        return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid email or password"})
 
-print(db.add_user('fighting58a@gmail.com', 'K.B.W.', 'atfirst#1', 'user'))
-print(db.add_user('fighting58b@gmail.com', 'Kim.B.W.', 'atfirst#1', 'user'))
-
-print(smtp.send_new_password('fighting58a@gmail.com', "Subject:Test mail3\n\nit's a test message"))
+@app.get("/index", response_class=HTMLResponse)
+async def index(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})

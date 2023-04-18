@@ -4,8 +4,8 @@ import sqlite3
 import random
 import string
 from cryptography.fernet import Fernet
-
 from passlib.context import CryptContext
+import smtp
 
 user_db = sqlite3.connect('./static/db/users.db')
 hash_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
@@ -122,10 +122,12 @@ def reset_password(email):
     if user:
         temp_password = generate_tmp_password()
         hashed_temp_password = hash_password(temp_password)
+
         cursor = user_db.cursor()
         cursor.execute(f"UPDATE {USER_TABLE} SET password = ? WHERE email = ?", \
                        (hashed_temp_password, email))
         user_db.commit()
+        smtp.send_email(email, f"Subject:Password change\n\nYour password is set to {temp_password}")
         return {'message': f'reset {email} accounts password randomly'}
     return {'message': f'{email} accounts not found'}
 

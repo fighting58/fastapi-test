@@ -1,19 +1,14 @@
 """ Send email """
 import smtplib
 import db
-import random
 from cryptography.fernet import Fernet
 
-
-def send_new_password(email: str, message: str) -> dict:
+def send_email(email: str, message: str) -> dict:
     """ send email"""
     admin = db.get_admin()
     if admin:
-        admin_email, admin_username, admin_password, admin_key = admin.values()
-    user = db.get_user_by_email(email)
-    if not user:
-        return {'message': f'{email}(user) not found'}
-    if not admin:
+        admin_email, _, admin_password, admin_key = admin.values()
+    else:
         return {'message': 'No admin account'}
 
     sender_email = admin_email
@@ -25,7 +20,7 @@ def send_new_password(email: str, message: str) -> dict:
             smtp.ehlo()
             smtp.starttls()
             smtp.login(sender_email, sender_password)
-            smtp.sendmail(sender_email, user['email'], message)
+            smtp.sendmail(sender_email, email, message)
             smtp.quit()
     except Exception as e:
         return {"message": f"Error sending email \n{e}"}
