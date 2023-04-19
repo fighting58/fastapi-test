@@ -1,24 +1,33 @@
 from fastapi import FastAPI, Request, Form, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from starlette.status import HTTP_302_FOUND
+from fastapi.staticfiles import StaticFiles
+import db
 
 app = FastAPI()
-templates = Jinja2Templates(directory="./static/template")
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="static/template")
+
 
 @app.get("/", response_class=HTMLResponse)
-async def login(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+def login(request: Request, error:str = None):
+    return templates.TemplateResponse("login.html", {"request": request, "error": error})
 
-@app.post("/", response_class=HTMLResponse)
-async def login_post(request: Request, response: Response, email: str = Form(...), password: str = Form(...)):
+@app.post("/login")
+async def do_login(request: Request):
     # 로그인 처리 로직
-    if email == "user@example.com" and password == "password":
-        response.status_code = HTTP_302_FOUND
-        response.headers["Location"] = "/index"
-        return response
-    else:
-        return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid email or password"})
+    form = await request.form()
+    email = form.get("email")
+    password = form.get("password")
+
+    user = db.get_user_by_email(email)
+    if not user:
+        return login(request, error='User email not found!!')
+    valid = db.verify_password(password, user['password'])
+
+    if valid:
+        return templates.TemplateResponse('index.html', {"request":request})
+    return login(request, error="email/password not match!!")
 
 @app.get("/index", response_class=HTMLResponse)
 async def index(request: Request):
