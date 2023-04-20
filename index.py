@@ -1,6 +1,6 @@
 __doc__ = "main process"
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
@@ -8,7 +8,7 @@ import db
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="static/template")
+templates = Jinja2Templates(directory="static/templates")
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -17,12 +17,9 @@ def login(request: Request, error:str = None):
     return templates.TemplateResponse("login.html", {"request": request, "error": error})
 
 @app.post("/login")
-async def do_login(request: Request):
+async def do_login(request: Request, email:str = Form(...), password:str = Form(...)) :
     """login action """
     # 로그인 처리 로직
-    form = await request.form()
-    email = form.get("email")
-    password = form.get("password")
 
     user = db.get_user_by_email(email)
     if not user:
